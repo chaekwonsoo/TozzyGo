@@ -1,0 +1,61 @@
+@@
+
+func max(a, b int) int {
+	if a >= b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func foo() bool {
+	return true
+}
+
+func goo(a int) bool {
+	if a<=0 {
+		return false
+	} else {
+	 	return true
+	} 
+}
+@@
+%%
+
+P(x,y) = a!x+y.b?(s,t).<P(x+1,x*(y-s))>.<P(s,max(x,y))||Q(t)>.b!(max(s,t),y)
+       + if x==max(x,y) {
+           	b?s.<P(x,y)>.
+           	if s==max(s,x) {
+           		<P(s,y)||Q(s)>.b!(x,s)
+         	} else {
+         		a!s
+         	}
+         }
+       + (a!x+b?t).<P(x,y)>.
+       		if x==max(x,y) {
+           		b?s.<P(x,y)>.
+           		if s==max(s,x) {
+           			<P(s,y)>.<Q(s)>.b!(x,s)
+         		}
+         	} else {
+         		a!x
+         	} 
+Q(y) = a?x.
+       if x > 0 && x==max(x,y) || goo(max(x,y)) {
+           b!(y).<Q(x)>.nil
+       }
+R = if foo() {
+        b!10.nil
+    }
+    + b!5
+    
+chan aa [10,10] // asynchrous channel with two parameters of which buffer size 10 each
+chan bb [100]	// asynchrous channel with one parameter of which buffer size is 100
+
+W = aa??(x,y)
+  + bb??(x).<W>
+Z = aa!!(1,2)
+  + bb!!3.<Z>
+
+T = <P(1,2)||Q(3)||R||W||Z>  // same as T = <P(1,2)>.<Q(3)>.<R>.<W>.<Z>
+%%
