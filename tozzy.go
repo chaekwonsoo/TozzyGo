@@ -86,13 +86,20 @@ func parseTozzyFile() {
 		"printf": fmt.Printf,
 	}
 
-	// TODO		_, err1 := Parse("PP/PF(TREE)", string(wholefile), "@@", "@@", builtins)
+	// TODO	_, err1 := Parse("PP/PF(TREE)", string(wholefile), "@@", "@@", builtins)
 	//		if err1 != nil {
 	//		}
 	
+	fmt.Println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+	
+	/*
+ 	 * Here occurs an deadlock!!: Parse
+	 */
 	_, err2 := Parse("TOZZY", string(wholefile), "%%", "%%", builtins)
 	if err2 != nil {
 	}
+
+	fmt.Println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
 }
 
 func readLinesFromFile(fname string) chan []byte {
@@ -126,7 +133,7 @@ func readLinesFromFile(fname string) chan []byte {
 	return lines
 }
 
-func accumulateReceivedBytes(lines <-chan []byte) []byte {	// receive-only channel
+func accumulateReceivedBytes(lines <-chan []byte) []byte {
 	wholefile := make([]byte, 0)
 
 	for {

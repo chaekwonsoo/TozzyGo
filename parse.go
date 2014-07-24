@@ -35,11 +35,17 @@ func Parse(name, text, leftDelim, rightDelim string, funcs ...map[string]interfa
 	treeSet = make(map[string]*Tree)
 	t := NewTree(name)
 	t.text = text
+
+	/*
+	 * Problem!!: deadlock!!
+	 */
 	_, err = t.Parse(text, leftDelim, rightDelim, treeSet, funcs...)
+	
 	if err != nil {
 		_, file, line, _ := runtime.Caller(0)
 		log.Fatal("PARSE ERROR", file, " ", line+1)
 	}
+
 	return
 }
 
