@@ -21,6 +21,13 @@ func tozzy() {
 	readTozzyDesc()
 }
 
+func flagSet() { // DOTO - make them reality
+	flag.String("word", "foo", "a string")
+	flag.Int("numb", 42, "an int")
+	flag.Bool("fork", false, "a bool")
+	flag.Parse()
+}
+
 func readTozzyDesc() {
 	if !hasCmlArg() {
 		readAndEchoStdin()
@@ -82,10 +89,7 @@ func parseTozzyFile() {
 	// TODO		_, err1 := Parse("PP/PF(TREE)", string(wholefile), "@@", "@@", builtins)
 	//		if err1 != nil {
 	//		}
-
-	fmt.Println(wholefile)	
-	fmt.Println("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
-
+	
 	_, err2 := Parse("TOZZY", string(wholefile), "%%", "%%", builtins)
 	if err2 != nil {
 	}
@@ -118,6 +122,7 @@ func readLinesFromFile(fname string) chan []byte {
 		}
 		close(lines)
 	}()
+
 	return lines
 }
 
@@ -137,11 +142,3 @@ func accumulateReceivedBytes(lines <-chan []byte) []byte {	// receive-only chann
 
 	return wholefile
 }
-
-func flagSet() { // DOTO - make them reality
-	flag.String("word", "foo", "a string")
-	flag.Int("numb", 42, "an int")
-	flag.Bool("fork", false, "a bool")
-	flag.Parse()
-}
-
