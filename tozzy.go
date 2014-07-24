@@ -14,6 +14,45 @@ import (
 	//	"strings"
 )
 
+func tozzy() {
+	fmt.Println("//=========== Welcome to tozzy world! ===========")
+	flagSet()
+	
+	readTozzyDesc()
+}
+
+func readTozzyDesc() {
+	if !hasCmlArg() {
+		readAndEchoStdin()
+	} else {
+		parseTozzyFile()
+	}
+}
+
+func hasCmlArg() bool {
+	if flag.Arg(0) == "" {
+		return false
+	}
+
+	return true
+}
+
+func readAndEchoStdin() {
+	const waitTime = 10
+	lines := scanForStdin()
+
+	for {
+		select {
+		case line := <-lines: // line is []byte
+			fmt.Println(line)
+		case <-time.After(time.Second * time.Duration(waitTime)):
+			// for each line wait for <waitTime> secs
+			fmt.Println(waitTime, "secs expired for one line input... exiting")
+			return
+		}
+	}
+}
+
 // get tozzy description from stdin
 func scanForStdin() chan string {
 	lines := make(chan string)
@@ -29,6 +68,29 @@ func scanForStdin() chan string {
 	return lines
 }
 
+func parseTozzyFile() {
+	lines := readLinesFromFile(flag.Arg(0))
+	wholefile := accumulateReceivedBytes(lines)
+
+	//@@ print(string(wholefile), len(wholefile))
+	// TODO
+	
+	var builtins = map[string]interface{}{
+		"printf": fmt.Printf,
+	}
+
+	// TODO		_, err1 := Parse("PP/PF(TREE)", string(wholefile), "@@", "@@", builtins)
+	//		if err1 != nil {
+	//		}
+
+	fmt.Println(wholefile)	
+	fmt.Println("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
+
+	_, err2 := Parse("TOZZY", string(wholefile), "%%", "%%", builtins)
+	if err2 != nil {
+	}
+}
+
 func readLinesFromFile(fname string) chan []byte {
 	lines := make(chan []byte)
 	go func() {
@@ -39,6 +101,7 @@ func readLinesFromFile(fname string) chan []byte {
 			log.Fatal("INPUT FILE READ ERROR", file, " ", line+1)
 		}
 		r := bufio.NewReader(fin)
+		
 		for {
 			line, prefix, err := r.ReadLine()
 			if prefix {
@@ -58,6 +121,23 @@ func readLinesFromFile(fname string) chan []byte {
 	return lines
 }
 
+func accumulateReceivedBytes(lines <-chan []byte) []byte {	// receive-only channel
+	wholefile := make([]byte, 0)
+
+	for {
+		if line, ok := <-lines; ok { // line is []byte
+			//@@ fmt.Println(line)
+			wholefile = append(wholefile, line...)
+			wholefile = append(wholefile, '\n')
+			//wholefile = append(wholefile, "\n"...) // this works also
+		} else {
+			break
+		}
+	}
+
+	return wholefile
+}
+
 func flagSet() { // DOTO - make them reality
 	flag.String("word", "foo", "a string")
 	flag.Int("numb", 42, "an int")
@@ -65,49 +145,3 @@ func flagSet() { // DOTO - make them reality
 	flag.Parse()
 }
 
-func tozzy() {
-	fmt.Println("//=========== Welcome to tozzy world! ===========")
-	flagSet()
-	waitTime := 10
-
-	switch arg0 := flag.Arg(0); {
-	case arg0 == "":
-		lines := scanForStdin()
-		for {
-			select {
-			case line := <-lines: // line is []byte
-				fmt.Println(line)
-			case <-time.After(time.Second * time.Duration(waitTime)):
-				// for each line wait for <waitTime> secs
-				fmt.Println(waitTime, "secs expired for one line input... exiting")
-				return
-			}
-		}
-	default:
-		lines := readLinesFromFile(arg0)
-		wholefile := make([]byte, 0)
-		var line []byte
-		var ok bool
-		for {
-			if line, ok = <-lines; ok { // line is []byte
-				//@@ fmt.Println(line)
-				wholefile = append(wholefile, line...)
-				wholefile = append(wholefile, '\n')
-				//wholefile = append(wholefile, "\n"...) // this works also
-			} else {
-				break
-			}
-		}
-		//@@ print(string(wholefile), len(wholefile))
-		// TODO
-		var builtins = map[string]interface{}{
-			"printf": fmt.Printf,
-		}
-		// TODO		_, err1 := Parse("PP/PF(TREE)", string(wholefile), "@@", "@@", builtins)
-		//		if err1 != nil {
-		//		}
-		_, err2 := Parse("TOZZY", string(wholefile), "%%", "%%", builtins)
-		if err2 != nil {
-		}
-	}
-}
