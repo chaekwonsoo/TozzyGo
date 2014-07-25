@@ -39,7 +39,7 @@ func Parse(name, text, leftDelim, rightDelim string, funcs ...map[string]interfa
 	/*
 	 * Problem!!: deadlock!!
 	 */
-	_, err = t.Parse(text, leftDelim, rightDelim, treeSet, funcs...)
+	_, err = t.Parse(text, leftDelim, rightDelim, treeSet, funcs...)	// wholefile, "%%", "%%", treeset, builtins
 	
 	if err != nil {
 		_, file, line, _ := runtime.Caller(0)
@@ -86,7 +86,12 @@ func (t *Tree) Parse(text, leftDelim, rightDelim string, treeSet map[string]*Tre
 	defer t.recover(&err)
 	t.startParse(funcs, lex(t.name, text, leftDelim, rightDelim))
 	t.text = text
+
+	/*
+	 * problem here!: Deadlock!!
+	 */
 	t.parse(treeSet)
+	
 	t.add(treeSet)
 	t.stopParse()
 	return t, nil
@@ -99,6 +104,16 @@ func (t *Tree) lexerTest() {
 			item := t.nextNonSpace()
 			for item.typ != itemEOF {
 				fmt.Println("================== --->", item.typ, "<---", item.val)
+				
+				// =============================================================================
+				/*
+				if item.typ == itemError {
+					fmt.Println(">>> item.typ: itemError <<<")
+					break
+				}
+				*/
+				// =============================================================================
+						
 				if item.typ == itemRightDelim {
 					break
 				}
@@ -114,12 +129,16 @@ func (t *Tree) lexerTest() {
 // It runs to EOF.
 func (t *Tree) parse(treeSet map[string]*Tree) {
 	t.root = newListNode(t.peek().pos)
-
+	
+	/*
+	 * Here DEADLOCK!!!
+	 */
 	t.lexerTest() //@@ TODO -JUST TO TEST LEXER
 
 	for t.peek().typ != itemEOF {
 		if t.peek().typ == itemLeftDelim {
 			delim := t.next() // get next token from lexer via channel "<-items"
+
 			if t.nextNonSpace().typ == itemIdentifier {
 				newT := NewTree("procDef") // name will be updated once we know it.
 				newT.text = t.text
@@ -263,12 +282,16 @@ func (t *Tree) add(treeSet map[string]*Tree) {
 
 // next returns the next token.
 func (t *Tree) next() item {
+	fmt.Println("NEXT() +++++++++++++++++++++++++++++++++++++++++++++")
+		
 	if t.peekCount > 0 {
 		t.peekCount--
 	} else {
+		fmt.Println("LEX. NEXTITEM() right after this. ==========================================")
 		t.token[0] = t.lex.nextItem()
 	}
 	fmt.Println("@@ (t *Tree) next", "(", t.token[t.peekCount], ")")
+
 	return t.token[t.peekCount]
 }
 
@@ -305,6 +328,7 @@ func (t *Tree) backup3(t2, t1 item) { // Reverse order: we're pushing back.
 // nextNonSpace returns the next non-space token.
 func (t *Tree) nextNonSpace() (token item) {
 	for {
+		fmt.Println("UUUUUUUUUUUUUUUUUUUUUUUUUUUUUU")
 		token = t.next()
 		if token.typ != itemSpace {
 			break

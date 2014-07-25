@@ -13,6 +13,16 @@ import (
 	"unicode/utf8"
 )
 
+/*
+ * only for debugging
+ */
+var sendCount int
+var receiveCount int
+
+var errorSendCount int
+var errorReceiveCount int
+
+
 // item represents a token or text string returned from the scanner.
 type item struct {
 	typ itemType // The type of this item.
@@ -105,7 +115,7 @@ type lexer struct {
 	start      Pos       // start position of this item
 	width      Pos       // width of last rune read from input
 	lastPos    Pos       // position of most recent item returned by nextItem
-	items      chan item // channel of scanned items
+	items      chan item // synchronous channel of scanned items
 	parenDepth int       // nesting depth of ( ) exprs
 }
 
@@ -140,7 +150,20 @@ func (l *lexer) backup() {
 // send item to channel "items"
 func (l *lexer) emit(t itemType) {
 	//@@ fmt.Println("@@ (l *lexer) emit", t)
-	l.items <- item{t, l.start, l.input[l.start:l.pos]}
+	
+	
+	// ==========================================================================================
+	
+	sendItem := item{t, l.start, l.input[l.start:l.pos]}
+	fmt.Println("sendItem:", sendItem)
+	l.items <- sendItem
+	//l.items <- item{t, l.start, l.input[l.start:l.pos]}
+	
+			
+	// ==========================================================================================
+			
+	sendCount++
+	fmt.Println("send:", sendCount)
 	l.start = l.pos
 }
 
@@ -177,7 +200,23 @@ func (l *lexer) lineNumber() int {
 // back a nil pointer that will be the next state, terminating l.nextItem.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 	//@@ fmt.Println("@@ (l *lexer) errorf")
-	l.items <- item{itemError, l.start, fmt.Sprintf(format, args...)}
+	
+	// ================================================================================================
+
+	errorItem := item{itemError, l.start, fmt.Sprintf(format, args...)}
+	fmt.Println("errorItem:", errorItem)
+	fmt.Println("errorItem Type:", errorItem.typ)
+	l.items <- errorItem
+	//l.items <- item{itemError, l.start, fmt.Sprintf(format, args...)}
+	
+	
+	// ================================================================================================
+	
+	errorSendCount++
+	fmt.Println("errorSend:", errorSendCount)
+
+	close(l.items)
+
 	return nil
 }
 
@@ -188,7 +227,13 @@ func (l *lexer) nextItem() item {
 	if _, file, _, _ := runtime.Caller(1); strings.Index(file, "parse.go") == -1 {
 		log.Fatal("\"nextItem\" should only called by \"next\" and \"peek\" in parse.go")
 	}
+
 	item := <-l.items
+
+	fmt.Println("receiveItem:", item)
+	receiveCount++
+	fmt.Println("receive:", receiveCount)
+	
 	l.lastPos = item.pos
 	//@@ fmt.Println("@@ (l *lexer) nextItem", "(", item.val, ")")
 	return item
