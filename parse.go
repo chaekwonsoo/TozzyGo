@@ -106,12 +106,10 @@ func (t *Tree) lexerTest() {
 				fmt.Println("================== --->", item.typ, "<---", item.val)
 				
 				// =============================================================================
-				/*
 				if item.typ == itemError {
-					fmt.Println(">>> item.typ: itemError <<<")
-					break
+					fmt.Println("[ERROR OCURRED] item.typ: itemError ")
+					log.Fatal("some error while lexing... Terminate the program.")
 				}
-				*/
 				// =============================================================================
 						
 				if item.typ == itemRightDelim {
