@@ -75,6 +75,9 @@ type ListNode struct {
 }
 
 func newListNode(pos Pos) *ListNode {
+	fmt.Println("	TRACE: (node.go) [newListNode(pos)]")
+	fmt.Println("		Create and return a new ListNode.")
+
 	return &ListNode{NodeType: NodeList, Pos: pos}
 }
 
