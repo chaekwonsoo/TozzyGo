@@ -139,7 +139,7 @@ func (l *lexer) next() rune {
 	l.pos += l.width
 	//@@ fmt.Println("@@ (l *lexer) next", "[", string(r), "]")
 
-	fmt.Println("	TRACE: (lex.go) (l.next()) returned next rune is", r)
+	fmt.Println("	TRACE: (lex.go) (l.next()) returned next rune is", string(r))
 	return r
 }
 
@@ -312,10 +312,17 @@ func (l *lexer) scanNumber() bool {
 	if l.accept("0") && l.accept("xX") {
 		digits = "0123456789abcdefABCDEF"
 	}
+	fmt.Println(digits)
+	
 	l.acceptRun(digits)
 	if l.accept(".") {
+		if string(l.peek()) == "n" {
+			l.backup()
+			return true
+		}
 		l.acceptRun(digits)
 	}
+	
 	if l.accept("eE") {
 		l.accept("+-")
 		l.acceptRun("0123456789")
