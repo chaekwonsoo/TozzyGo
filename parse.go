@@ -97,9 +97,9 @@ func (t *Tree) Parse(text, leftDelim, rightDelim string, treeSet map[string]*Tre
 	return t, nil
 }
 
-/*
-func (t *Tree) lexerTest() {
-	log.Println("lexerTest()")
+func (t *Tree) lexing() {
+	log.Println("lexing()")
+	itemSlice := make([]item, 0)
 
 	for t.peek().typ != itemEOF {
 		if t.peek().typ == itemLeftDelim {
@@ -107,6 +107,7 @@ func (t *Tree) lexerTest() {
 			item := t.nextNonSpace()
 			for item.typ != itemEOF {
 				fmt.Println("================== --->", item.typ, "<---", item.val)
+				itemSlice = append(itemSlice, item)
 				
 				if item.typ == itemError {
 					fmt.Println("[ERROR OCURRED] item.typ: itemError ")
@@ -118,11 +119,22 @@ func (t *Tree) lexerTest() {
 				}
 				item = t.nextNonSpace()
 			}
+			
+			printAllItems(itemSlice)
 			log.Fatal("DONE FOR NOW")
 		}
 	}
 }
-*/
+
+func printAllItems(itemSlice []item) {
+	fmt.Println("---------- Print all the items! ------------")
+		
+	for i := 0; i < len(itemSlice); i++ {
+		fmt.Println(itemSlice[i].val, itemSlice[i].typ)
+	}
+
+	fmt.Println("--------------------------------------------")
+}
 
 // parse is the top-level parser for a input.
 // next() and peek() gets new item from lexer.
@@ -132,7 +144,9 @@ func (t *Tree) parse(treeSet map[string]*Tree) {
 
 	t.root = newListNode(t.peek().pos)
 	
-	//t.lexerTest() // only for testing the lexer
+	t.lexing() // before, it was only for testing the lexer
+	
+	/*
 	for t.peek().typ != itemEOF {
 
 		if t.peek().typ == itemLeftDelim {
@@ -155,6 +169,7 @@ func (t *Tree) parse(treeSet map[string]*Tree) {
 		}
 		t.root.append(n)
 	}
+	*/
 }
 
 //@@func (t *Tree) parse(treeSet map[string]*Tree) (next Node) {
