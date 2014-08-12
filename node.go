@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-	//	"strings"
+	"log"
 )
 
 var textFormat = "%s" // Changed to "%q" in tests for better error messages.
@@ -75,8 +75,7 @@ type ListNode struct {
 }
 
 func newListNode(pos Pos) *ListNode {
-	fmt.Println("	TRACE: (node.go) [newListNode(pos)]")
-	fmt.Println("		Create and return a new ListNode.")
+	log.Println("newListNode(Pos): Create and return a new ListNode.")
 
 	return &ListNode{NodeType: NodeList, Pos: pos}
 }

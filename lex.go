@@ -13,18 +13,6 @@ import (
 	"unicode/utf8"
 )
 
-// =====================================================
-/*
- * only for debugging
- */
-var sendCount int
-var receiveCount int
-
-var errorSendCount int
-var errorReceiveCount int
-// =====================================================
-
-
 // item represents a token or text string returned from the scanner.
 type item struct {
 	typ itemType // The type of this item.
@@ -33,8 +21,8 @@ type item struct {
 }
 
 func (i item) String() string {
-	fmt.Println("	TRACE: (lex.go) [item.String()]")
-	
+	log.Println("String()")
+
 	switch {
 	case i.typ == itemEOF:
 		return "EOF"
@@ -77,9 +65,7 @@ const (
 	itemNumber            	// simple number, including imaginary
 	itemParallel      		// '||'
 	itemPlus         		// '+' could be either non-deterministic choice or plus
-	// ============================================================================
 	itemMultiply			// '*'
-	// ============================================================================
 	itemQuestionMark       	// '?'
 	itemRawString          	// raw quoted string (includes quotes)
 	itemRightAngleBracket  	// '>'
@@ -128,8 +114,6 @@ type lexer struct {
 
 // next returns the next rune in the input.
 func (l *lexer) next() rune {
-	fmt.Println("	TRACE: (lex.go) [l.next()]")
-
 	if int(l.pos) >= len(l.input) {
 		l.width = 0
 		return eof
@@ -137,26 +121,25 @@ func (l *lexer) next() rune {
 	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
 	l.width = Pos(w)
 	l.pos += l.width
-	//@@ fmt.Println("@@ (l *lexer) next", "[", string(r), "]")
 
-	fmt.Println("	TRACE: (lex.go) (l.next()) returned next rune is", string(r))
+	log.Println("next(): next rune is", string(r))
 	return r
 }
 
 // peek returns but does not consume the next rune in the input.
 func (l *lexer) peek() rune {
-	fmt.Println("	TRACE: (lex.go) [l.peek()]")
-	
+	log.Println("peek()")
+
 	r := l.next()
 	l.backup()
-	//@@ fmt.Println("@@ (l *lexer) peek", "[", string(r), "]")
+	
 	return r
 }
 
 // backup steps back one rune. Can only be called once per call of next.
 func (l *lexer) backup() {
-	fmt.Println("	TRACE: (lex.go) [l.backup()]")
-	
+	log.Println("backup()")
+
 	l.pos -= l.width
 }
 
@@ -164,51 +147,36 @@ func (l *lexer) backup() {
 // emit passes an item back to the client.
 // send item to channel "items"
 func (l *lexer) emit(t itemType) {
-	fmt.Println("	TRACE: (lex.go) [l.emit(itemType)]")
-	fmt.Println("	TRACE: (lex.go) (l.emit(itemType)) l.items <- item")
-	fmt.Println("		i.e. Send the item to channel 'items'.")
-	
-	//@@ fmt.Println("@@ (l *lexer) emit", t)
-	
-	
-	// ==========================================================================================
-	
-	sendItem := item{t, l.start, l.input[l.start:l.pos]}
-	fmt.Println("sendItem:", sendItem)
-	
-	l.items <- sendItem
-	//l.items <- item{t, l.start, l.input[l.start:l.pos]}
-	
+	log.Println("emit(itemType)")
+
+	l.items <- item{t, l.start, l.input[l.start:l.pos]}
 			
-	// ==========================================================================================
-			
-	sendCount++
-	fmt.Println("send:", sendCount)
 	l.start = l.pos
 }
 
 // ignore skips over the pending input before this point.
 func (l *lexer) ignore() {
-	fmt.Println("	TRACE: (lex.go) [l.ignore()]")
-	
+	log.Println("ignore()")
+
 	l.start = l.pos
 }
 
 // accept consumes the next rune if it's from the valid set.
 func (l *lexer) accept(valid string) bool {
-	fmt.Println("	TRACE: (lex.go) [l.accept(valid string)]")
-	
+	log.Println("accept(string)")
+
 	if strings.IndexRune(valid, l.next()) >= 0 {
 		return true
 	}
 	l.backup()
+	
 	return false
 }
 
 // acceptRun consumes a run of runes from the valid set.
 func (l *lexer) acceptRun(valid string) {
-	fmt.Println("	TRACE: (lex.go) [l.acceptRun(valid string)]")
-	
+	log.Println("acceptRun(validString)")
+
 	for strings.IndexRune(valid, l.next()) >= 0 {
 	}
 	l.backup()
@@ -218,33 +186,17 @@ func (l *lexer) acceptRun(valid string) {
 // the previous item returned by nextItem. Doing it this way
 // means we don't have to worry about peek double counting.
 func (l *lexer) lineNumber() int {
-	fmt.Println("	TRACE: (lex.go) [l.lineNumber()]")
+	log.Println("lineNumber()")
 
-	//@@ fmt.Println("@@ (l *lexer) lineNumber")
 	return 1 + strings.Count(l.input[:l.lastPos], "\n")
 }
 
 // errorf returns an error token and terminates the scan by passing
 // back a nil pointer that will be the next state, terminating l.nextItem.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
-	fmt.Println("	TRACE: (lex.go) [l.errorf(format string, args ...interface{})]")
+	log.Println("errorf(string, interface{})")
 
-	//@@ fmt.Println("@@ (l *lexer) errorf")
-	
-	// ================================================================================================
-
-	errorItem := item{itemError, l.start, fmt.Sprintf(format, args...)}
-	fmt.Println("errorItem:", errorItem)
-	fmt.Println("errorItem Type:", errorItem.typ)
-	l.items <- errorItem
-	//l.items <- item{itemError, l.start, fmt.Sprintf(format, args...)}
-	
-	
-	// ================================================================================================
-	
-	errorSendCount++
-	fmt.Println("errorSend:", errorSendCount)
-
+	l.items <- item{itemError, l.start, fmt.Sprintf(format, args...)}
 	close(l.items)
 
 	return nil
@@ -254,24 +206,15 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 // nextItem returns the next item from the input.
 // next and peek in parse.go calls this function to get nextItem
 func (l *lexer) nextItem() item {
-	fmt.Println("	TRACE: (lex.go) [l.nextItem()]")
+	log.Println("nextItem()")
 
 	if _, file, _, _ := runtime.Caller(1); strings.Index(file, "parse.go") == -1 {
 		log.Fatal("\"nextItem\" should only be called by \"next\" and \"peek\" in parse.go")
 	}
 
-	fmt.Println("	TRACE: (lex.go) (l.nextItem()) yet didn't get item from <-l.items")
 	item := <-l.items
-	fmt.Println("	TRACE: (lex.go) (l.nextItem()) just got item from <-l.items")
-
-	// ======================================================================
-	fmt.Println("receiveItem:", item)
-	receiveCount++
-	fmt.Println("receive:", receiveCount)
-	// ======================================================================
-
 	l.lastPos = item.pos
-	//@@ fmt.Println("@@ (l *lexer) nextItem", "(", item.val, ")")
+	
 	return item
 }
 
@@ -280,9 +223,8 @@ func (l *lexer) nextItem() item {
 // like "$x+2" not being acceptable without a space, in case we decide one
 // day to implement arithmetic.
 func (l *lexer) atTerminator() bool {
-	fmt.Println("	TRACE: (lex.go) [l.atTerminator()]")
+	log.Println("atTerminator()")
 
-	//@@ fmt.Println("@@ atTerminator")
 	r := l.peek()
 	if isSpace(r) || isEndOfLine(r) {
 		return true
@@ -302,9 +244,8 @@ func (l *lexer) atTerminator() bool {
 }
 
 func (l *lexer) scanNumber() bool {
-	fmt.Println("	TRACE: (lex.go) [l.scanNumber()]")
+	log.Println("scanNumber()")
 
-	//@@ fmt.Println("@@ (l *lexer) scanNumber")
 	// Optional leading sign.
 	l.accept("+-")
 	// Is it hex?
@@ -339,9 +280,8 @@ func (l *lexer) scanNumber() bool {
 
 // run runs the state machine for the lexer.
 func (l *lexer) run() {
-	fmt.Println("	TRACE: (lex.go) [l.run()]")
-	
-	//@@ fmt.Println("@@ (l *lexer) run")
+	log.Println("run()")
+
 	for l.state = lexStart; l.state != nil; {
 		l.state = l.state(l)
 	}
@@ -349,11 +289,8 @@ func (l *lexer) run() {
 
 // lex creates a new scanner for the input string.
 func lex(name, input, left, right string) *lexer {
-	fmt.Println("	TRACE: (lex.go) [lex(name, input, left, right string)]")
-	fmt.Println("		Creates a new scanner for the input string.")
-	fmt.Println("		--> CALL: go l.run()")
+	log.Println("lex(name, intput, leftDelim, rightDelim): Creates a new scanner for the input string..and then call go l.run()")
 
-	//@@ fmt.Println("@@ lex")
 	if left == "" {
 		left = leftDelim
 	}
@@ -383,9 +320,8 @@ const (
 
 // lexStart scans until an opening action delimiter, "%%".
 func lexStart(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexStart(lexer)]")
+	log.Println("lexStart(lexer): Scans until an opening action delimiter, %%.")
 
-	//@@ fmt.Println("@@ lexStart")
 	for {
 		if strings.HasPrefix(l.input[l.pos:], l.leftDelim) {
 			if l.pos > l.start {
@@ -409,9 +345,8 @@ func lexStart(l *lexer) stateFn {
 
 // lexLeftDelim scans the left delimiter, which is known to be present.
 func lexLeftDelim(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexLeftDelim(lexer)]")
+	log.Println("lexLeftDelim(lexer): Scans the left delimiter.")
 
-	//@@ fmt.Println("@@ lexLeftDelim")
 	l.pos += Pos(len(l.leftDelim))
 	//	if strings.HasPrefix(l.input[l.pos:], leftComment) {
 	//		return lexComment
@@ -422,9 +357,8 @@ func lexLeftDelim(l *lexer) stateFn {
 }
 
 func lexMisc(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexMisc(lexer)]")
+	log.Println("lexMisc(lexer)")
 
-	//@@ fmt.Println("@@ lexMisc")
 	// Either number, quoted string, or identifier.
 	// Spaces separate arguments; runs of spaces turn into itemSpace.
 	if strings.HasPrefix(l.input[l.pos:], l.rightDelim) {
@@ -508,9 +442,8 @@ func lexMisc(l *lexer) stateFn {
 
 // lexComment scans a comment. The left comment marker is known to be present.
 func lexComment(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexComment(lexer)]")
+	log.Println("lexComment(lexer)")
 
-	//@@ fmt.Println("@@ lexComment")
 	l.pos += Pos(len(leftComment))
 	i := strings.Index(l.input[l.pos:], rightComment)
 	if i < 0 {
@@ -528,9 +461,8 @@ func lexComment(l *lexer) stateFn {
 
 // lexRightDelim scans the right delimiter, which is known to be present.
 func lexRightDelim(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexRightDelim(lexer)]")
+	log.Println("lexRightDelim(lexer)")
 
-	//@@ fmt.Println("@@ lexRightDelim")
 	l.pos += Pos(len(l.rightDelim))
 	l.emit(itemRightDelim)
 	return lexMisc
@@ -539,9 +471,8 @@ func lexRightDelim(l *lexer) stateFn {
 // lexSpace scans a run of space characters.
 // One space has already been seen.
 func lexSpace(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexSpace(lexer)]")
+	log.Println("lexSpace(lexer): Scans a run of space characters.")
 
-	//@@ fmt.Println("@@ lexSpace")
 	for isSpace(l.peek()) {
 		l.next()
 	}
@@ -551,9 +482,8 @@ func lexSpace(l *lexer) stateFn {
 
 // lexIdentifier scans an alphanumeric.
 func lexIdentifier(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexIdentifier(lexer)]")
+	log.Println("lexIdentifier(lexer)")
 
-	//@@ fmt.Println("@@ lexIdentifier")
 Loop:
 	for {
 		switch r := l.next(); {
@@ -582,9 +512,8 @@ Loop:
 // lexChar scans a character constant. The initial quote is already
 // scanned. Syntax checking is done by the parser.
 func lexChar(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexChar(lexer)]")
+	log.Println("lexChar(lexer)")
 
-	//@@ fmt.Println("@@ lexChar")
 Loop:
 	for {
 		switch l.next() {
@@ -608,9 +537,8 @@ Loop:
 // and "089" - but when it's wrong the input is invalid and the parser (via
 // strconv) will notice.
 func lexNumber(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexNumber(lexer)]")
+	log.Println("lexNumber(lexer)")
 
-	//@@ fmt.Println("@@ lexNumber")
 	if !l.scanNumber() {
 		return l.errorf("bad number syntax: %q", l.input[l.start:l.pos])
 	}
@@ -620,9 +548,8 @@ func lexNumber(l *lexer) stateFn {
 
 // lexQuote scans a quoted string.
 func lexQuote(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexQuote(lexer)]")
+	log.Println("lexQuote(lexer)")
 
-	//@@ fmt.Println("@@ lexQuote")
 Loop:
 	for {
 		switch l.next() {
@@ -643,9 +570,8 @@ Loop:
 
 // lexRawQuote scans a raw quoted string.
 func lexRawQuote(l *lexer) stateFn {
-	fmt.Println("	TRACE: (lex.go) [lexRawQuote(lexer)]")
+	log.Println("lexRawQuote(lexer)")
 
-	//@@ fmt.Println("@@ lexRawQuote")
 Loop:
 	for {
 		switch l.next() {
@@ -661,24 +587,21 @@ Loop:
 
 // isSpace reports whether r is a space character.
 func isSpace(r rune) bool {
-	fmt.Println("	TRACE: (lex.go) [isSpace(rune)]")
+	log.Println("isSpace(rune)")
 
-	//@@ fmt.Println("@@ isSpace")
 	return r == ' ' || r == '\t'
 }
 
 // isEndOfLine reports whether r is an end-of-line character.
 func isEndOfLine(r rune) bool {
-	fmt.Println("	TRACE: (lex.go) [isEndOfLine(rune)]")
+	log.Println("isEndOfLine(rune)")
 
-	//@@ fmt.Println("@@ isEndOfLine")
 	return r == '\r' || r == '\n'
 }
 
-// isAlphaNumeric reports whether r is an alphabetic, digit, or underscore.
+// isAlphaNumeric reports whether r is an alphabet, digit, or underscore.
 func isAlphaNumeric(r rune) bool {
-	fmt.Println("	TRACE: (lex.go) [isAlphaNumeric(rune)]")
+	log.Println("isAlphaNumeric(rune)")
 
-	//@@ fmt.Println("@@ isAlphaNumeric (", string(r), ")")
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }

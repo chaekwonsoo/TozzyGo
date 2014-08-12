@@ -1,4 +1,4 @@
-// Copyright 2011 The Go Authors. All rights reserved.
+
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,11 +9,9 @@
 package main
 
 import (
-	//@@	"bytes"
 	"fmt"
 	"log"
 	"runtime"
-	//	"strconv"
 	"strings"
 )
 
@@ -32,15 +30,12 @@ type Tree struct {
 // Parse returns a map from name to parse.Tree. If an error is encountered,
 // parsing stops and an empty map is returned with the error.
 func Parse(name, text, leftDelim, rightDelim string, funcs ...map[string]interface{}) (treeSet map[string]*Tree, err error) {
-	fmt.Println("	TRACE: (parse.go) [Parse(name, text, leftDelim, rightDelim, funcs)]")
-	
+	log.Println("Parse(name, text, leftDelim, rightDelim, funcs)")
+
 	treeSet = make(map[string]*Tree)
 	t := NewTree(name)
 	t.text = text
 
-	/*
-	 * Problem!!: deadlock!!
-	 */
 	_, err = t.Parse(text, leftDelim, rightDelim, treeSet, funcs...)	// wholefile, "%%", "%%", treeset, builtins
 	
 	if err != nil {
@@ -53,8 +48,8 @@ func Parse(name, text, leftDelim, rightDelim string, funcs ...map[string]interfa
 
 // New allocates a new parse tree with the given name.
 func NewTree(name string, funcs ...map[string]interface{}) *Tree {
-	fmt.Println("	TRACE: (parse.go) [newTree(name, funcs)]")
-		
+	log.Println("NewTree(name, funcs)")
+
 	return &Tree{
 		name:  name,
 		funcs: funcs,
@@ -63,8 +58,8 @@ func NewTree(name string, funcs ...map[string]interface{}) *Tree {
 
 // IsEmptyTree reports whether this tree (node) is empty of everything but space.
 func IsEmptyTree(n Node) bool {	
-	fmt.Println("	TRACE: (parse.go) [IsEmpty(node)]")
-		
+	log.Println("IsEmptyTree(Node)")
+
 	switch n := n.(type) {
 	case nil:
 		return true
@@ -89,15 +84,12 @@ func IsEmptyTree(n Node) bool {
 // default ("{{" or "}}") is used. Embedded template definitions are added to
 // the treeSet map.
 func (t *Tree) Parse(text, leftDelim, rightDelim string, treeSet map[string]*Tree, funcs ...map[string]interface{}) (tree *Tree, err error) {	
-	fmt.Println("	TRACE: (parse.go) [t.Parse(text, leftDelim, rightDelim, treeSet, funcs)]")
-			
+	log.Println("t.Parse(text, leftDelim, rightDelim, treeSet, funcs)")
+
 	defer t.recover(&err)
 	t.startParse(funcs, lex(t.name, text, leftDelim, rightDelim))
 	t.text = text
 
-	/*
-	 * problem here!: Deadlock!!
-	 */
 	t.parse(treeSet)
 	
 	t.add(treeSet)
@@ -105,8 +97,9 @@ func (t *Tree) Parse(text, leftDelim, rightDelim string, treeSet map[string]*Tre
 	return t, nil
 }
 
+/*
 func (t *Tree) lexerTest() {
-	fmt.Println("	TRACE: (parse.go) [t.lexerTest()]")
+	log.Println("lexerTest()")
 
 	for t.peek().typ != itemEOF {
 		if t.peek().typ == itemLeftDelim {
@@ -115,12 +108,10 @@ func (t *Tree) lexerTest() {
 			for item.typ != itemEOF {
 				fmt.Println("================== --->", item.typ, "<---", item.val)
 				
-				// =============================================================================
 				if item.typ == itemError {
 					fmt.Println("[ERROR OCURRED] item.typ: itemError ")
 					log.Fatal("some error while lexing... Terminate the program.")
 				}
-				// =============================================================================
 						
 				if item.typ == itemRightDelim {
 					break
@@ -131,29 +122,25 @@ func (t *Tree) lexerTest() {
 		}
 	}
 }
+*/
 
-// parse is the top-level parser for a input
-// next() and peek() gets new item from lexer
+// parse is the top-level parser for a input.
+// next() and peek() gets new item from lexer.
 // It runs to EOF.
 func (t *Tree) parse(treeSet map[string]*Tree) {
-	fmt.Println("	TRACE: (parse.go) [t.parse(treeSet)]")
-	fmt.Println("		Top-level parser for the input.")
-	fmt.Println("		next() and peek() gets new items from the lexer.")
-		
+	log.Println("t.parse(treeSet): the top-level parser for an intput.")
+
 	t.root = newListNode(t.peek().pos)
-	/*
-	 * Here DEADLOCK!!!
-	 */
-	t.lexerTest() //@@ TODO -JUST TO TEST LEXER
 	
+	//t.lexerTest() // only for testing the lexer
 	for t.peek().typ != itemEOF {
+
 		if t.peek().typ == itemLeftDelim {
 			delim := t.next() // get next token from lexer via channel "<-items"
 
 			if t.nextNonSpace().typ == itemIdentifier {
 				newT := NewTree("procDef") // name will be updated once we know it.
 				newT.text = t.text
-				print("DDDDDDDDDDDD", t.text[t.lex.pos:], "SSSSSSSSSS")
 				newT.startParse(t.funcs, t.lex)
 				newT.parseProcDef(treeSet)
 				continue
@@ -161,6 +148,8 @@ func (t *Tree) parse(treeSet map[string]*Tree) {
 			t.backup2(delim)
 		}
 		n := t.itemNode() // tree node
+		fmt.Println("-----", n, "-----")
+		fmt.Println("YAYAYA")
 		if n.Type() == nodeEnd {
 			t.errorf("unexpected %s", n)
 		}
@@ -193,9 +182,8 @@ func (t *Tree) parse(treeSet map[string]*Tree) {
 
 // startParse initializes the parser, using the lexer.
 func (t *Tree) startParse(funcs []map[string]interface{}, lex *lexer) {
-	fmt.Println("	TRACE: (parse.go) [t.startParse(funcs, lex)]")
-	fmt.Println("		Initialize the parser, with the lexer.")
-		
+	log.Println("startParse(funcs, lexer): Initialize the parse with the lexer.")
+
 	t.root = nil
 	t.lex = lex
 	t.funcs = funcs
@@ -203,17 +191,16 @@ func (t *Tree) startParse(funcs []map[string]interface{}, lex *lexer) {
 
 // stopParse terminates parsing.
 func (t *Tree) stopParse() {
-	fmt.Println("	TRACE: (parse.go) [t.stopParse()]")
-		
+	log.Println("stopParse()")
+
 	t.lex = nil
 	t.funcs = nil
 }
 
 //	token
 func (t *Tree) itemNode() Node {
-	fmt.Println("	TRACE: (parse.go) [t.itemNode()]")
+	log.Println("itemNode()")
 
-	fmt.Println("@@ (t *Tree) itemNode")
 	switch token := t.nextNonSpace(); token.typ {
 	case itemBool: // boolean constant
 	case itemChar: // printable ASCII character; grab bag for comma etc.
@@ -248,8 +235,7 @@ func (t *Tree) itemNode() Node {
 }
 
 func (t *Tree) parseProcDef(treeSet map[string]*Tree) {
-	fmt.Println("	TRACE: (parse.go) [t.parseProDef(treeSet)]")
-	fmt.Println("@@ (t *Tree) parseProcDef")
+	log.Println("parseProcDef(treeSet)")
 
 	// TODO
 
@@ -275,8 +261,7 @@ func (t *Tree) parseProcDef(treeSet map[string]*Tree) {
 
 // add adds tree to the treeSet.
 func (t *Tree) add(treeSet map[string]*Tree) {
-	fmt.Println("	TRACE: (parse.go) [t.add(treeSet)]")
-	fmt.Println("@@ (t *Tree) add")
+	log.Println("add(treeSet): Add tree to the treeSet")
 
 	tree := treeSet[t.name]
 	if tree == nil || IsEmptyTree(tree.root) {
@@ -303,22 +288,20 @@ func (t *Tree) add(treeSet map[string]*Tree) {
 
 // next returns the next token.
 func (t *Tree) next() item {
-	fmt.Println("	TRACE: (parse.go) [t.next()]")
-		
+
 	if t.peekCount > 0 {
 		t.peekCount--
 	} else {
 		t.token[0] = t.lex.nextItem()
 	}
-	fmt.Println("@@ (t *Tree) next", "(", t.token[t.peekCount], ")")
+	log.Println("next(): returns the next token.:", t.token[t.peekCount])
 
 	return t.token[t.peekCount]
 }
 
 // peek returns but does not consume the next token.
 func (t *Tree) peek() item {
-	fmt.Println("	TRACE: (parse.go) [t.peek()]")
-	fmt.Println("		--> CALL: t.lex.nextItem()")
+	log.Println("peek()")
 
 	if t.peekCount > 0 {
 		return t.token[t.peekCount-1]
@@ -330,7 +313,7 @@ func (t *Tree) peek() item {
 
 // backup backs the input stream up one token.
 func (t *Tree) backup() {
-	fmt.Println("	TRACE: (parse.go) [t.backup()]")
+	log.Println("backup()")
 
 	t.peekCount++
 }
@@ -338,7 +321,7 @@ func (t *Tree) backup() {
 // backup2 backs the input stream up two tokens.
 // The zeroth token is already there.
 func (t *Tree) backup2(t1 item) {
-	fmt.Println("	TRACE: (parse.go) [t.backup2(item)]")
+	log.Println("backup2(item)")
 
 	t.token[1] = t1
 	t.peekCount = 2
@@ -347,7 +330,7 @@ func (t *Tree) backup2(t1 item) {
 // backup3 backs the input stream up three tokens
 // The zeroth token is already there.
 func (t *Tree) backup3(t2, t1 item) { // Reverse order: we're pushing back.
-	fmt.Println("	TRACE: (parse.go) [t.backup3(item2, item1)]")
+	log.Println("backup3()")
 
 	t.token[1] = t1
 	t.token[2] = t2
@@ -356,7 +339,7 @@ func (t *Tree) backup3(t2, t1 item) { // Reverse order: we're pushing back.
 
 // nextNonSpace returns the next non-space token.
 func (t *Tree) nextNonSpace() (token item) {
-	fmt.Println("	TRACE: (parse.go) [t.nextNonSpace()]")
+	log.Println("nextNonSpace(): Return the next non-space token.")
 
 	for {
 		token = t.next()
@@ -369,7 +352,7 @@ func (t *Tree) nextNonSpace() (token item) {
 
 // peekNonSpace returns but does not consume the next non-space token.
 func (t *Tree) peekNonSpace() (token item) {
-	fmt.Println("	TRACE: (parse.go) [t.peekNonSpace()]")
+	log.Println("peekNonSpace()")
 
 	for {
 		token = t.next()
@@ -387,9 +370,8 @@ func (t *Tree) peekNonSpace() (token item) {
 
 // ErrorContext returns a textual representation of the location of the node in the input text.
 func (t *Tree) ErrorContext(n Node) (location, context string) {
-	fmt.Println("	TRACE: (parse.go) [t.ErrorContext(node)]")
-	fmt.Println("@@ (t *Tree) Error")
-	
+	log.Println("ErrorContext(Node)")
+
 	pos := int(n.Position())
 	text := t.text[:pos]
 	byteNum := strings.LastIndex(text, "\n")
@@ -409,9 +391,8 @@ func (t *Tree) ErrorContext(n Node) (location, context string) {
 
 // errorf formats the error and terminates processing.
 func (t *Tree) errorf(format string, args ...interface{}) {
-	fmt.Println("	TRACE: (parse.go) [t.errorf(format string, args ...interface{})]")
-	fmt.Println("@@ (t *Tree) errorf")
-	
+	log.Println("errorf(format, args)")
+
 	t.root = nil
 	format = fmt.Sprintf("template: %s:%d: %s", t.lex.lineNumber(), format)
 	panic(fmt.Errorf(format, args...))
@@ -419,17 +400,15 @@ func (t *Tree) errorf(format string, args ...interface{}) {
 
 // error terminates processing.
 func (t *Tree) error(err error) {
-	fmt.Println("	TRACE: (parse.go) [t.error(error)]")
-	fmt.Println("@@ (t *Tree) error")
-	
+	log.Println("error(error)")
+
 	t.errorf("%s", err)
 }
 
 // expect consumes the next token and guarantees it has the required type.
 func (t *Tree) expect(expected itemType, context string) item {
-	fmt.Println("	TRACE: (parse.go) [t.expect(expected itemType, context string)]")
-	fmt.Println("@@ (t *Tree) expect")
-	
+	log.Println("expect(itemType, contextString)")
+
 	token := t.nextNonSpace()
 	if token.typ != expected {
 		t.unexpected(token, context)
@@ -439,9 +418,8 @@ func (t *Tree) expect(expected itemType, context string) item {
 
 // expectOneOf consumes the next token and guarantees it has one of the required types.
 func (t *Tree) expectOneOf(expected1, expected2 itemType, context string) item {
-	fmt.Println("	TRACE: (parse.go) [t.expectOneOf(expected1 itemType, expected2 itemType, context string)]")
-	fmt.Println("@@ (t *Tree) expectOneOf")
-	
+	log.Println("expectOneOf(itemType1, itemType2, contextString)")
+
 	token := t.nextNonSpace()
 	if token.typ != expected1 && token.typ != expected2 {
 		t.unexpected(token, context)
@@ -451,16 +429,14 @@ func (t *Tree) expectOneOf(expected1, expected2 itemType, context string) item {
 
 // unexpected complains about the token and terminates processing.
 func (t *Tree) unexpected(token item, context string) {
-	fmt.Println("	TRACE: (parse.go) [t.unexpected(token item, context string)]")
-	fmt.Println("@@ (t *Tree) unexpected")
-	
+	log.Println("unexpected(item, contextString)")
+
 	t.errorf("unexpected %s in %s", token, context)
 }
 
 // recover is the handler that turns panics into returns from the top level of Parse.
 func (t *Tree) recover(errp *error) {
-	fmt.Println("	TRACE: (parse.go) [t.recover(error)]")
-	fmt.Println("@@ (t *Tree) recover")
+	log.Println("recover(error)")
 
 	e := recover()
 	if e != nil {
@@ -479,9 +455,8 @@ func (t *Tree) recover(errp *error) {
 //	textOrAction*
 // Terminates at {{end}} or {{else}}, returned separately.
 func (t *Tree) itemList() (list *ListNode, next Node) {
-	fmt.Println("	TRACE: (parse.go) [t.itemList()]")
-	fmt.Println("@@ (t *Tree) itemList")
-	
+	log.Println("itemList()")
+
 	list = newListNode(t.peekNonSpace().pos)
 	for t.peekNonSpace().typ != itemEOF {
 		n := t.itemNode()
@@ -496,9 +471,8 @@ func (t *Tree) itemList() (list *ListNode, next Node) {
 }
 
 func (t *Tree) parseControl(allowElseIf bool, context string) (pos Pos, line int, list, elseList *ListNode) {
-	fmt.Println("	TRACE: (parse.go) [t.parseControl(allowElseIf bool, context string)]")
-	fmt.Println("@@ (t *Tree) parseControl")
-	
+	log.Println("parseControl(allowElseIf, contextString)")
+
 	//@@	defer t.popVars(len(t.vars))
 	line = t.lex.lineNumber()
 	var next Node
@@ -536,9 +510,8 @@ func (t *Tree) parseControl(allowElseIf bool, context string) (pos Pos, line int
 //	{{if pipeline}} itemList {{else}} itemList {{end}}
 // If keyword is past.
 func (t *Tree) ifControl() Node {
-	fmt.Println("	TRACE: (parse.go) [t.ifControl()]")
-	fmt.Println("@@ (t *Tree) ifControl")
-	
+	log.Println("ifControl()")
+
 	return newIfNode(t.parseControl(true, "if"))
 }
 
@@ -546,9 +519,8 @@ func (t *Tree) ifControl() Node {
 //	{{end}}
 // End keyword is past.
 func (t *Tree) endControl() Node {
-	fmt.Println("	TRACE: (parse.go) [t.endControl()]")
-	fmt.Println("@@ (t *Tree) endControl")
-	
+	log.Println("endControl()")
+
 	return newEndNode(t.expect(itemRightDelim, "end").pos)
 }
 
@@ -556,9 +528,8 @@ func (t *Tree) endControl() Node {
 //	{{else}}
 // Else keyword is past.
 func (t *Tree) elseControl() Node {
-	fmt.Println("	TRACE: (parse.go) [t.elseControl()]")
-	fmt.Println("@@ (t *Tree) elseControl")
-	
+	log.Println("elseContro()")
+
 	// Special case for "else if".
 	peek := t.peekNonSpace()
 	if peek.typ == itemIf {
@@ -570,9 +541,8 @@ func (t *Tree) elseControl() Node {
 
 // hasFunction reports if a function name exists in the Tree's maps.
 func (t *Tree) hasFunction(name string) bool {
-	fmt.Println("	TRACE: (parse.go) [t.hasFunction(name string)]")
-	fmt.Println("@@ (t *Tree) hasFunction")
-	
+	log.Println("hasFunction(name)")
+
 	for _, funcMap := range t.funcs {
 		if funcMap == nil {
 			continue

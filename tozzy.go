@@ -1,7 +1,6 @@
 package main
 
 import (
-	//	"errors"
 	"bufio"
 	"flag"
 	"fmt"
@@ -10,8 +9,6 @@ import (
 	"os"
 	"runtime"
 	"time"
-	//	"regexp"
-	//	"strings"
 )
 
 func tozzy() {
@@ -79,27 +76,13 @@ func parseTozzyFile() {
 	lines := readLinesFromFile(flag.Arg(0))
 	wholefile := accumulateReceivedBytes(lines)
 
-	//@@ print(string(wholefile), len(wholefile))
-	// TODO
-	
 	var builtins = map[string]interface{}{
 		"printf": fmt.Printf,
 	}
 
-	// TODO	_, err1 := Parse("PP/PF(TREE)", string(wholefile), "@@", "@@", builtins)
-	//		if err1 != nil {
-	//		}
-	
-	fmt.Println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
-	
-	/*
- 	 * Here occurs an deadlock!!: Parse
-	 */
 	_, err2 := Parse("TOZZY", string(wholefile), "%%", "%%", builtins)
 	if err2 != nil {
 	}
-
-	fmt.Println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
 }
 
 func readLinesFromFile(fname string) chan []byte {
